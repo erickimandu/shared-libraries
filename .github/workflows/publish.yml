@@ -1,0 +1,43 @@
+name: Publish NuGet Package
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore Dependencies
+        run: dotnet restore src/SharedLibraries.csproj
+
+      - name: Build Project
+        run: dotnet build src/SharedLibraries.csproj --configuration Release --no-restore
+
+      - name: Pack NuGet Package
+        run: dotnet pack src/SharedLibraries.csproj --configuration Release --no-build --output nupkg
+
+      - name: Publish to GitHub Packages
+        run: |
+          dotnet nuget push nupkg/*.nupkg \
+            --source "https://nuget.pkg.github.com/YOUR_GITHUB_ORG/index.json" \
+            --api-key ${{ secrets.GITHUB_TOKEN }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish to NuGet.org
+        run: |
+          dotnet nuget push nupkg/*.nupkg \
+            --source "https://api.nuget.org/v3/index.json" \
+            --api-key ${{ secrets.NUGET_API_KEY }}
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
